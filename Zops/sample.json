@@ -1,0 +1,179 @@
+{
+    "itineraries": [
+        {
+            "stops": [
+                {
+                    "location_name": "St. Lawrence Market",
+                    "duration": "1 hour",
+                    "cost": 10,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6487,-79.3716",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6487,-79.3716/43.6473,-79.3777"
+                },
+                {
+                    "location_name": "Hockey Hall of Fame",
+                    "duration": "1 hour 30 minutes",
+                    "cost": 10,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6473,-79.3777",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6473,-79.3777/43.6525,-79.3834"
+                },
+                {
+                    "location_name": "Nathan Phillips Square",
+                    "duration": "30 minutes",
+                    "cost": 0,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6525,-79.3834",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6525,-79.3834/43.6515,-79.4008"
+                },
+                {
+                    "location_name": "Queen Street West",
+                    "duration": "2 hours",
+                    "cost": 5,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6515,-79.4008",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6515,-79.4008/43.6544,-79.4010"
+                },
+                {
+                    "location_name": "Kensington Market",
+                    "duration": "1 hour",
+                    "cost": 5,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6544,-79.4010",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6544,-79.4010/43.6476,-79.4139"
+                },
+                {
+                    "location_name": "Trinity Bellwoods Park",
+                    "duration": "1 hour",
+                    "cost": 0,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6476,-79.4139",
+                    "path_to_next": null
+                }
+            ],
+            "total_duration": "7 hours",
+            "total_cost": 30,
+            "location_currency": "CAD",
+            "summary": "Explore the vibrant heart of Toronto with this budget-friendly itinerary packed with food, culture, and sightseeing.",
+            "package_name": "Toronto Downtown Adventure",
+            "start": "9:00 AM",
+            "end": "4:00 PM",
+            "total_distance": "6 km",
+            "transport_mode": "Walking and Public Transport"
+        },
+        {
+            "stops": [
+                {
+                    "location_name": "Art Gallery of Ontario",
+                    "duration": "1 hour 30 minutes",
+                    "cost": 10,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6536,-79.3925",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6536,-79.3925/43.6629,-79.3957"
+                },
+                {
+                    "location_name": "University of Toronto Campus",
+                    "duration": "1 hour",
+                    "cost": 0,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6629,-79.3957",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6629,-79.3957/43.6551,-79.3918"
+                },
+                {
+                    "location_name": "Baldwin Street for Lunch",
+                    "duration": "1 hour",
+                    "cost": 10,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6551,-79.3918",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6551,-79.3918/43.6476,-79.3972"
+                },
+                {
+                    "location_name": "Graffiti Alley",
+                    "duration": "1 hour",
+                    "cost": 0,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6476,-79.3972",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6476,-79.3972/43.6503,-79.3596"
+                },
+                {
+                    "location_name": "Distillery District",
+                    "duration": "1 hour 30 minutes",
+                    "cost": 0,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6503,-79.3596",
+                    "path_to_next": null
+                }
+            ],
+            "total_duration": "6 hours",
+            "total_cost": 20,
+            "location_currency": "CAD",
+            "summary": "Immerse yourself in the artistic and historical essence of Toronto, featuring art, education, and iconic urban sights.",
+            "package_name": "Cultural Essence of Toronto",
+            "start": "10:30 AM",
+            "end": "4:30 PM",
+            "total_distance": "5 km",
+            "transport_mode": "Walking and Public Transit"
+        },
+        {
+            "stops": [
+                {
+                    "location_name": "Harbourfront Centre",
+                    "duration": "45 minutes",
+                    "cost": 0,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6388,-79.3806",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6388,-79.3806/43.6407,-79.3765"
+                },
+                {
+                    "location_name": "Ferry to Toronto Islands",
+                    "duration": "1 hour 30 minutes",
+                    "cost": 10,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6407,-79.3765",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6407,-79.3765/43.6204,-79.3782"
+                },
+                {
+                    "location_name": "Central Island Picnic",
+                    "duration": "1 hour",
+                    "cost": 5,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6204,-79.3782",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6204,-79.3782/43.6424,-79.3860"
+                },
+                {
+                    "location_name": "Ripley\u2019s Aquarium of Canada",
+                    "duration": "1 hour",
+                    "cost": 10,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6424,-79.3860",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6424,-79.3860/43.6426,-79.3871"
+                },
+                {
+                    "location_name": "CN Tower Viewing",
+                    "duration": "1 hour",
+                    "cost": 10,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6426,-79.3871",
+                    "path_to_next": "https://www.google.com/maps/dir/43.6426,-79.3871/43.6413,-79.3842"
+                },
+                {
+                    "location_name": "Roundhouse Park",
+                    "duration": "30 minutes",
+                    "cost": 0,
+                    "currency": "CAD",
+                    "google_map_coordinates": "43.6413,-79.3842",
+                    "path_to_next": null
+                }
+            ],
+            "total_duration": "6 hours 45 minutes",
+            "total_cost": 35,
+            "location_currency": "CAD",
+            "summary": "Enjoy a mix of cityscapes, nature, and iconic attractions including a serene picnic on Toronto Islands and a breathtaking view from CN Tower.",
+            "package_name": "Iconic Toronto Highlights",
+            "start": "11:00 AM",
+            "end": "5:45 PM",
+            "total_distance": "7 km",
+            "transport_mode": "Walking and Ferry"
+        }
+    ]
+}
