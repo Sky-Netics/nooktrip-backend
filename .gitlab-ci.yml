@@ -28,7 +28,7 @@ deploy-nook-functions:
     if [ "$CI_COMMIT_BRANCH" == "prod" ]; then
       sam deploy --stack-name NOOK-TRIP-${CI_COMMIT_BRANCH} --s3-bucket nt-cf-prod-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${CI_COMMIT_BRANCH}
     else
-      sam deploy --stack-name NOOK-TRIP-${CI_COMMIT_BRANCH} --s3-bucket nt-cf-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${CI_COMMIT_BRANCH}
+      sam deploy --stack-name NOOK-TRIP-${CI_COMMIT_BRANCH} --s3-bucket nook-cf-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${CI_COMMIT_BRANCH}
     fi
   environment:
     name: $CI_COMMIT_BRANCH
