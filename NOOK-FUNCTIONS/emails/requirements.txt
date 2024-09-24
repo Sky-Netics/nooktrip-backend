@@ -1,3 +1,6 @@
 boto3==1.28.85
 pydantic[email]==2.5.2
 sqlalchemy==2.0.23
+psycopg2-binary
+requests
+pydantic
