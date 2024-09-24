@@ -23,13 +23,39 @@ Resources:
       Name: !Sub "nooktrip-secrets-${env}"
       Description: "Secrets for NookTrip API"
 
+  ItinerariesLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: ItinerariesLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - secretsmanager:GetSecretValue
+            Resource: !Ref NookTripSecrets
+
   ITINERARIESFUNCTION:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: itineraries/
       FunctionName: !Sub "Itineraries-${env}"
       Handler: lambda_function.lambda_handler
-      Role: arn:aws:iam::730335245225:role/master_lambda_role
+      Role: !GetAtt ItinerariesLambdaRole.Arn
       Runtime: python3.11
       Architectures:
       - x86_64
@@ -43,13 +69,44 @@ Resources:
             Path: /itineraries
             Method: POST
 
+  EmailsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: EmailsLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - secretsmanager:GetSecretValue
+            Resource: !Ref NookTripSecrets
+          - Effect: Allow
+            Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+            Resource: '*'
+
   EMAILSFUNCTION:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: emails/
       FunctionName: !Sub "Emails-${env}"
       Handler: lambda_function.lambda_handler
-      Role: arn:aws:iam::730335245225:role/master_lambda_role
+      Role: !GetAtt EmailsLambdaRole.Arn
       Runtime: python3.11
       Architectures:
       - x86_64

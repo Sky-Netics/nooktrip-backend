@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 # Retrieve secrets from AWS Secrets Manager
 def get_secret():
-    secret_name = os.environ.get('SECRET_ID_NAME')
-    region_name = "us-west-2"  # Replace with your AWS region
+    secret_name = os.environ.get('SECRET_ID_NAME', 'nooktrip-secrets-dev')
+    region_name = "us-east-2"  # Replace with your AWS region
 
     session = boto3.session.Session()
     client = session.client(
