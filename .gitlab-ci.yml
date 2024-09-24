@@ -1,39 +1,35 @@
 stages:
-  - build
-  - test
-  - deploy
+- build
+- deploy
 
 # Existing jobs (keeping them as they might be relevant for other parts of the project)
 build-job:
   stage: build
   script:
-    - echo "Compiling the code..."
-    - echo "Compile complete."
-
+  - echo "Compiling the code..."
+  - echo "Compile complete."
 
 # New job translated from GitHub Actions
 deploy-nook-functions:
   stage: deploy
   image: python:3.11
   rules:
-    - if: $CI_COMMIT_BRANCH =~ /^(dev|uat|prod)$/
-      changes:
-        - NOOK-FUNCTIONS/**/*
+  - if: $CI_COMMIT_BRANCH =~ /^(dev|uat|prod)$/
   before_script:
-    - pip install awscli
-    - pip install aws-sam-cli
-    - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-    - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-    - aws configure set region us-east-1
+  - pip install awscli
+  - pip install aws-sam-cli
+  - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  - aws configure set region us-east-2
   script:
-    - cd NOOK-FUNCTIONS
-    - sam build
-    - |
-      if [ "$CI_COMMIT_BRANCH" == "prod" ]; then
-        sam deploy --stack-name NOOK-TRIP-${CI_COMMIT_BRANCH} --s3-bucket nt-cf-prod-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${CI_COMMIT_BRANCH}
-      else
-        sam deploy --stack-name NOOK-TRIP-${CI_COMMIT_BRANCH} --s3-bucket nt-cf-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${CI_COMMIT_BRANCH}
-      fi
+  - cd NOOK-FUNCTIONS
+  - sam build
+  - |
+    if [ "$CI_COMMIT_BRANCH" == "prod" ]; then
+      sam deploy --stack-name NOOK-TRIP-${CI_COMMIT_BRANCH} --s3-bucket nt-cf-prod-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${CI_COMMIT_BRANCH}
+    else
+      sam deploy --stack-name NOOK-TRIP-${CI_COMMIT_BRANCH} --s3-bucket nt-cf-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${CI_COMMIT_BRANCH}
+    fi
   environment:
     name: $CI_COMMIT_BRANCH
 
