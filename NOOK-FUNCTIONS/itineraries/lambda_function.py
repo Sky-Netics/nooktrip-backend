@@ -4,12 +4,42 @@ import logging
 from typing import Dict, Any, List
 from random import randint
 
+import boto3
+from botocore.exceptions import ClientError
 from openai import OpenAI
 from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Retrieve secrets from AWS Secrets Manager
+def get_secret():
+    secret_name = os.environ.get('SECRET_ID_NAME')
+    region_name = "us-west-2"  # Replace with your AWS region
+
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        logger.error(f"Error retrieving secret: {e}")
+        raise e
+    else:
+        if 'SecretString' in get_secret_value_response:
+            return json.loads(get_secret_value_response['SecretString'])
+        else:
+            logger.error("Secret value is not a string")
+            raise ValueError("Secret value is not a string")
+
+# Retrieve secrets
+secrets = get_secret()
 
 # Pydantic models
 class Stop(BaseModel):
@@ -36,7 +66,7 @@ class Response(BaseModel):
 
 # Initialize OpenAI client
 client = OpenAI(
-    api_key=os.environ.get('OPENAI_API_KEY'),
+    api_key=secrets.get('OPENAI_API_KEY'),
     timeout=60,
     max_retries=3
 )

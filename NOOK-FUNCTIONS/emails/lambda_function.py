@@ -15,8 +15,36 @@ from models import SelectedItinerary
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Retrieve secrets from AWS Secrets Manager
+def get_secret():
+    secret_name = os.environ.get('SECRET_ID_NAME')
+    region_name = "us-west-2"  # Replace with your AWS region
+
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        logger.error(f"Error retrieving secret: {e}")
+        raise e
+    else:
+        if 'SecretString' in get_secret_value_response:
+            return json.loads(get_secret_value_response['SecretString'])
+        else:
+            logger.error("Secret value is not a string")
+            raise ValueError("Secret value is not a string")
+
+# Retrieve secrets
+secrets = get_secret()
+
 # Initialize database connection
-db = sa.create_engine(os.environ.get("DB_CONNECTION"))
+db = sa.create_engine(secrets.get("DB_CONNECTION"))
 
 # Pydantic models
 class Stop(BaseModel):
@@ -100,7 +128,7 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     Returns:
     bool: True if the email was sent successfully, False otherwise.
     """
-    SENDER = "your-sender-email@example.com"
+    SENDER = secrets.get("SENDER_EMAIL", "your-sender-email@example.com")
     SUBJECT = "Your NookTrip Itinerary"
 
     # Create a formatted email body with the itinerary details
@@ -123,9 +151,8 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
         BODY_TEXT += f"\n  Google Maps: https://www.google.com/maps/search/?api=1&query={stop['google_map_coordinates']}"
         if stop['path_to_next']:
             BODY_TEXT += f"\n  Path to next stop: {stop['path_to_next']}"
-
     return True
-    # client = boto3.client('ses', region_name="us-west-2")
+    # client = boto3.client('ses', region_name=secrets.get("AWS_REGION", "us-west-2"))
     # try:
     #     response = client.send_email(
     #         Destination={'ToAddresses': [recipient]},
