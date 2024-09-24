@@ -35,7 +35,7 @@ jobs:
       working-directory: ./NOOK-FUNCTIONS
       run: |
         if [ "${{ steps.branch-name.outputs.branch-name }}" == "prod" ]; then
-          sam deploy --stack-name ZOHO-${{ steps.branch-name.outputs.branch-name }} --s3-bucket nt-cf-prod-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${{ steps.branch-name.outputs.branch-name }}
+          sam deploy --stack-name NOOK-TRIP-${{ steps.branch-name.outputs.branch-name }} --s3-bucket nt-cf-prod-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${{ steps.branch-name.outputs.branch-name }}
         else
-          sam deploy --stack-name ZOHO-${{ steps.branch-name.outputs.branch-name }} --s3-bucket nt-cf-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${{ steps.branch-name.outputs.branch-name }}
+          sam deploy --stack-name NOOK-TRIP-${{ steps.branch-name.outputs.branch-name }} --s3-bucket nt-cf-ohio --capabilities CAPABILITY_IAM --parameter-overrides env=${{ steps.branch-name.outputs.branch-name }}
         fi
