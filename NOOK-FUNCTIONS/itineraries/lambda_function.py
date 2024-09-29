@@ -43,7 +43,8 @@ secrets = get_secret()
 
 # Pydantic models
 class Stop(BaseModel):
-    location_name: str
+    location_title: str
+    location_address: str
     duration: str 
     cost: int
     currency: str
@@ -120,7 +121,8 @@ def generate_itinerary(city: str, budget: int, is_single: bool) -> Dict[str, Any
 6. Food: Include meals and small snacks to make the trip more exciting.
 7. Traveler Type: Adjust activities based on whether it's for a single traveler or a couple.
 8. Stops: For each stop, provide:
-   - Location Name and brief description
+   - Location Name the name of the location (e.g cafe name )
+   - Location address 
    - Duration of the activity
    - Cost
    - ### Google Maps detailed coordinates (in latitude,longitude format) . 

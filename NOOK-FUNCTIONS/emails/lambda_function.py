@@ -48,12 +48,12 @@ db = sa.create_engine(secrets.get("DB_CONNECTION"))
 
 # Pydantic models
 class Stop(BaseModel):
-    location_name: str
+    location_title: str
+    location_address: str
     duration: str 
     cost: int
     currency: str
     google_map_coordinates: str
-    path_to_next: Optional[str] = None
 
 class Itinerary(BaseModel):
     stops: List[Stop]
@@ -224,7 +224,8 @@ if __name__ == '__main__':
             'itinerary': {
                 'stops': [
                     {
-                        'location_name': 'CN Tower',
+                        'location_title': 'CN Tower',
+                        'location_address': '790 Queen street',
                         'duration': '2h',
                         'cost': 50,
                         'currency': 'CAD',
@@ -232,7 +233,8 @@ if __name__ == '__main__':
                         'path_to_next': 'https://www.google.com/maps/dir/43.6425662,-79.3870568/43.6488821,-79.3731843'
                     },
                     {
-                        'location_name': 'St. Lawrence Market',
+                         'location_title': 'CN Tower',
+                        'location_address': '790 Queen street',
                         'duration': '1h30m',
                         'cost': 20,
                         'currency': 'CAD',
