@@ -128,6 +128,7 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     Returns:
     bool: True if the email was sent successfully, False otherwise.
     """
+    return True
     SENDER = secrets.get("SENDER_EMAIL", "your-sender-email@example.com")
     SUBJECT = "Your NookTrip Itinerary"
 
@@ -151,7 +152,6 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
         BODY_TEXT += f"\n  Google Maps: https://www.google.com/maps/search/?api=1&query={stop['google_map_coordinates']}"
         if stop['path_to_next']:
             BODY_TEXT += f"\n  Path to next stop: {stop['path_to_next']}"
-    return True
     # client = boto3.client('ses', region_name=secrets.get("AWS_REGION", "us-west-2"))
     # try:
     #     response = client.send_email(
