@@ -2,6 +2,9 @@ import json
 import os
 import logging
 from typing import Dict, Any, List, Optional
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 import boto3
 from botocore.exceptions import ClientError
@@ -119,7 +122,7 @@ def save_itinerary(email: str, itinerary: Dict[str, Any]) -> bool:
 
 def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     """
-    Send an email with the itinerary details.
+    Send an email with the itinerary details using Gmail SMTP.
     
     Args:
     recipient (str): The recipient's email address.
@@ -128,46 +131,63 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     Returns:
     bool: True if the email was sent successfully, False otherwise.
     """
-    return True
-    SENDER = secrets.get("SENDER_EMAIL", "your-sender-email@example.com")
-    SUBJECT = "Your NookTrip Itinerary"
+    SENDER = secrets.get("SENDER_EMAIL", "your-sender-email@gmail.com")
+    SENDER_PASSWORD = secrets.get("SENDER_PASSWORD", "your-sender-password")
+    SUBJECT = f"Your NookTrip Itinerary: {itinerary['package_name']}"
 
-    # Create a formatted email body with the itinerary details
-    BODY_TEXT = f"""
-    Your NookTrip Itinerary:
+    # Read the HTML template
+    try:
+        with open('Template/Standard version-2.html', 'r') as file:
+            html_template = file.read()
+    except FileNotFoundError:
+        logger.error("HTML template file not found")
+        return False
 
-    Package Name: {itinerary['package_name']}
-    Summary: {itinerary['summary']}
-    Total Duration: {itinerary['total_duration']}
-    Total Cost: {itinerary['total_cost']} {itinerary['location_currency']}
-    Start: {itinerary['start']}
-    End: {itinerary['end']}
-    Total Distance: {itinerary['total_distance']}
-    Transport Mode: {itinerary['transport_mode']}
+    # Replace placeholders in the template
+    html_content = html_template.replace('[Destination]', itinerary['package_name'])
+    html_content = html_content.replace('[Date]', f"{itinerary['start']} - {itinerary['end']}")
+    html_content = html_content.replace('[Place A]', itinerary['stops'][0]['location_title'])
+    html_content = html_content.replace('[Place B]', itinerary['stops'][-1]['location_title'])
 
-    Stops:
-    """
-    for stop in itinerary['stops']:
-        BODY_TEXT += f"\n- {stop['location_name']}: Duration: {stop['duration']}, Cost: {stop['cost']} {stop['currency']}"
-        BODY_TEXT += f"\n  Google Maps: https://www.google.com/maps/search/?api=1&query={stop['google_map_coordinates']}"
-        if stop['path_to_next']:
-            BODY_TEXT += f"\n  Path to next stop: {stop['path_to_next']}"
-    # client = boto3.client('ses', region_name=secrets.get("AWS_REGION", "us-west-2"))
-    # try:
-    #     response = client.send_email(
-    #         Destination={'ToAddresses': [recipient]},
-    #         Message={
-    #             'Body': {'Text': {'Charset': "UTF-8", 'Data': BODY_TEXT}},
-    #             'Subject': {'Charset': "UTF-8", 'Data': SUBJECT},
-    #         },
-    #         Source=SENDER
-    #     )
-    # except ClientError as e:
-    #     logger.error(f"Error sending email: {e.response['Error']['Message']}")
-    #     return False
-    # else:
-    #     logger.info(f"Email sent! Message ID: {response['MessageId']}")
-    #     return True
+    # Create activities and meals content
+    activities_content = ""
+    for i, stop in enumerate(itinerary['stops']):
+        if i == 0:
+            activities_content += f"<p style='margin: 10px 0;'><strong>Morning Activity:</strong> {stop['location_title']} - {stop['duration']}</p>"
+        elif i == len(itinerary['stops']) - 1:
+            activities_content += f"<p style='margin: 10px 0;'><strong>Afternoon Activity:</strong> {stop['location_title']} - {stop['duration']}</p>"
+        else:
+            activities_content += f"<p style='margin: 10px 0;'><strong>Stop {i+1}:</strong> {stop['location_title']} - {stop['duration']}, Cost: {stop['cost']} {stop['currency']}</p>"
+
+    html_content = html_content.replace("<p style=\"margin: 10px 0;\"><strong>Morning Activity:</strong> [Activity 1]</p>", activities_content)
+    html_content = html_content.replace("<p style=\"margin: 10px 0;\"><strong>Lunch Stop:</strong> [Restaurant] - $[Cost]</p>", "")
+    html_content = html_content.replace("<p style=\"margin: 10px 0;\"><strong>Afternoon Activity:</strong> [Activity 2]</p>", "")
+    html_content = html_content.replace("<p style=\"margin: 10px 0;\"><strong>Dinner Spot:</strong> [Restaurant] - $[Cost]</p>", "")
+
+    # Add total cost and duration
+    html_content += f"<p style='margin: 10px 0;'><strong>Total Cost:</strong> {itinerary['total_cost']} {itinerary['location_currency']}</p>"
+    html_content += f"<p style='margin: 10px 0;'><strong>Total Duration:</strong> {itinerary['total_duration']}</p>"
+
+    # Create the email message
+    msg = MIMEMultipart()
+    msg['From'] = SENDER
+    msg['To'] = recipient
+    msg['Subject'] = SUBJECT
+
+    # Attach HTML content
+    msg.attach(MIMEText(html_content, 'html'))
+
+    # Connect to Gmail SMTP server and send the email
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(SENDER, SENDER_PASSWORD)
+            server.send_message(msg)
+    except Exception as e:
+        logger.error(f"Error sending email: {str(e)}")
+        return False
+    else:
+        logger.info(f"Email sent successfully to: {recipient}")
+        return True
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
