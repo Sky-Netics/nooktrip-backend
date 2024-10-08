@@ -154,6 +154,10 @@ def send_email(recipient: str, itinerary: Dict[str, Any], itinerary_id: int) -> 
     feedback_base_url = os.environ.get('FEEDBACK_API_URL', 'https://example.com/feedback')
     like_url = f"{feedback_base_url}?itinerary_id={itinerary_id}&feedback=like"
     dislike_url = f"{feedback_base_url}?itinerary_id={itinerary_id}&feedback=dislike"
+    print("feedback_url: ", feedback_base_url)
+    print("like_url: ", like_url)
+    print("dislike_url: ", dislike_url)
+
 
     # Replace feedback URLs in the template
     html_content = html_content.replace('[Like URL]', like_url)
