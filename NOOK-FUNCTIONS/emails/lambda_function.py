@@ -84,11 +84,15 @@ def validate_input(data: Dict[str, Any]) -> Dict[str, str]:
     Returns:
     Dict[str, str]: A dictionary of error messages, if any.
     """
+    logger.info(f"Validating input data: {json.dumps(data, default=str)}")
     errors = {}
     try:
         EmailRequest(**data)
     except ValueError as e:
         errors["validation"] = str(e)
+        logger.error(f"Input validation failed: {str(e)}")
+    else:
+        logger.info("Input validation successful")
     return errors
 
 def save_itinerary(email: str, itinerary: Dict[str, Any]) -> Optional[int]:
@@ -102,6 +106,7 @@ def save_itinerary(email: str, itinerary: Dict[str, Any]) -> Optional[int]:
     Returns:
     Optional[int]: The ID of the saved itinerary if successful, None otherwise.
     """
+    logger.info(f"Attempting to save itinerary for email: {email}")
     try:
         with db.connect() as conn:
             add_query = sa.insert(SelectedItinerary).values(
@@ -111,8 +116,9 @@ def save_itinerary(email: str, itinerary: Dict[str, Any]) -> Optional[int]:
             result = conn.execute(add_query)
             if result.rowcount == 1:
                 conn.commit()
-                logger.info(f"Itinerary saved successfully for email: {email}")
-                return result.inserted_primary_key[0]
+                itinerary_id = result.inserted_primary_key[0]
+                logger.info(f"Itinerary saved successfully for email: {email}, ID: {itinerary_id}")
+                return itinerary_id
             else:
                 logger.warning(f"Failed to save itinerary for email: {email}")
                 return None
@@ -132,6 +138,7 @@ def send_email(recipient: str, itinerary: Dict[str, Any], itinerary_id: int) -> 
     Returns:
     bool: True if the email was sent successfully, False otherwise.
     """
+    logger.info(f"Preparing to send email to: {recipient}")
     SENDER = secrets.get("SENDER_EMAIL", "your-sender-email@gmail.com")
     SENDER_PASSWORD = secrets.get("SENDER_PASSWORD", "your-sender-password")
     SUBJECT = f"Your NookTrip Itinerary: {itinerary['package_name']}"
@@ -140,6 +147,7 @@ def send_email(recipient: str, itinerary: Dict[str, Any], itinerary_id: int) -> 
     try:
         with open('Standard version-2.html', 'r') as file:
             html_template = file.read()
+        logger.info("HTML template read successfully")
     except FileNotFoundError:
         logger.error("HTML template file not found")
         return False
@@ -154,10 +162,9 @@ def send_email(recipient: str, itinerary: Dict[str, Any], itinerary_id: int) -> 
     feedback_base_url = os.environ.get('FEEDBACK_API_URL', 'https://example.com/feedback')
     like_url = f"{feedback_base_url}?itinerary_id={itinerary_id}&feedback=like"
     dislike_url = f"{feedback_base_url}?itinerary_id={itinerary_id}&feedback=dislike"
-    print("feedback_url: ", feedback_base_url)
-    print("like_url: ", like_url)
-    print("dislike_url: ", dislike_url)
-
+    logger.info(f"Feedback base URL: {feedback_base_url}")
+    logger.info(f"Like URL: {like_url}")
+    logger.info(f"Dislike URL: {dislike_url}")
 
     # Replace feedback URLs in the template
     html_content = html_content.replace('[Like URL]', like_url)
@@ -232,10 +239,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
     Dict[str, Any]: The response containing the result of the email sending process.
     """
-    logger.info(f"Received event: {event}")
+    logger.info(f"Received event: {json.dumps(event, default=str)}")
     
     try:
         json_data = json.loads(event['body'])
+        logger.info(f"Parsed JSON data: {json.dumps(json_data, default=str)}")
     except json.JSONDecodeError:
         logger.error("Invalid JSON in event body")
         return {"statusCode": 400, "body": json.dumps("Invalid JSON in request body")}
