@@ -23,6 +23,32 @@ Resources:
       Name: !Sub "nooktrip-secrets-${env}"
       Description: "Secrets for NookTrip API"
 
+  NookTripImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "nooktrip-images-${env}"
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  NookTripImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref NookTripImagesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
+
   ItinerariesLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -99,6 +125,10 @@ Resources:
             - ses:SendEmail
             - ses:SendRawEmail
             Resource: '*'
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
 
   EMAILSFUNCTION:
     Type: AWS::Serverless::Function
@@ -113,6 +143,7 @@ Resources:
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
+          IMAGES_BUCKET_NAME: !Ref NookTripImagesBucket
       Events:
         ApiEvent:
           Type: Api
@@ -130,3 +161,9 @@ Outputs:
   EmailsApi:
     Description: "API Gateway endpoint URL for Emails function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/emails/"
+  NookTripImagesBucketName:
+    Description: "S3 Bucket for storing NookTrip images"
+    Value: !Ref NookTripImagesBucket
+  NookTripImagesBucketUrl:
+    Description: "URL for accessing NookTrip images"
+    Value: !Sub "https://${NookTripImagesBucket}.s3.amazonaws.com/"
