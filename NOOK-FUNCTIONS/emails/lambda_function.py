@@ -137,7 +137,7 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
 
     # Read the HTML template
     try:
-        with open('Standard version.html', 'r') as file:
+        with open('Standard version.html-2', 'r') as file:
             html_template = file.read()
     except FileNotFoundError:
         logger.error("HTML template file not found")
