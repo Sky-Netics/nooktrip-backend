@@ -12,11 +12,17 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues:
-    - dev
-    - uat
-    - prod
+      - dev
+      - uat
+      - prod
 
 Resources:
+  # Define the API Gateway explicitly
+  NookTripApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: NookTripApi
+
   NookTripSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -51,32 +57,34 @@ Resources:
             Action: s3:GetObject
             Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
 
+  # IAM Role for Itineraries function
   ItinerariesLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-        - Effect: Allow
-          Principal:
-            Service: lambda.amazonaws.com
-          Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-      - PolicyName: ItinerariesLambdaPolicy
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-          - Effect: Allow
-            Action:
-            - secretsmanager:GetSecretValue
-            Resource: !Ref NookTripSecrets
+        - PolicyName: ItinerariesLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref NookTripSecrets
 
+  # Itineraries Lambda Function
   ITINERARIESFUNCTION:
     Type: AWS::Serverless::Function
     Properties:
@@ -86,7 +94,7 @@ Resources:
       Role: !GetAtt ItinerariesLambdaRole.Arn
       Runtime: python3.11
       Architectures:
-      - x86_64
+        - x86_64
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
@@ -94,44 +102,47 @@ Resources:
         ApiEvent:
           Type: Api
           Properties:
+            RestApiId: !Ref NookTripApi
             Path: /itineraries
             Method: POST
 
+  # IAM Role for Emails function
   EmailsLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-        - Effect: Allow
-          Principal:
-            Service: lambda.amazonaws.com
-          Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-      - PolicyName: EmailsLambdaPolicy
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-          - Effect: Allow
-            Action:
-            - secretsmanager:GetSecretValue
-            Resource: !Ref NookTripSecrets
-          - Effect: Allow
-            Action:
-            - ses:SendEmail
-            - ses:SendRawEmail
-            Resource: '*'
-          - Effect: Allow
-            Action:
-            - s3:GetObject
-            Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
+        - PolicyName: EmailsLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref NookTripSecrets
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
 
+  # Emails Lambda Function
   EMAILSFUNCTION:
     Type: AWS::Serverless::Function
     Properties:
@@ -141,45 +152,49 @@ Resources:
       Role: !GetAtt EmailsLambdaRole.Arn
       Runtime: python3.11
       Architectures:
-      - x86_64
+        - x86_64
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
           IMAGES_BUCKET_NAME: !Ref NookTripImagesBucket
-          FEEDBACK_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
+          # Remove circular dependency on ServerlessRestApi
+          # FEEDBACK_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
       Events:
         ApiEvent:
           Type: Api
           Properties:
+            RestApiId: !Ref NookTripApi
             Path: /emails
             Method: POST
 
+  # IAM Role for Feedback function
   FeedbackLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-        - Effect: Allow
-          Principal:
-            Service: lambda.amazonaws.com
-          Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-      - PolicyName: FeedbackLambdaPolicy
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-          - Effect: Allow
-            Action:
-            - secretsmanager:GetSecretValue
-            Resource: !Ref NookTripSecrets
+        - PolicyName: FeedbackLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref NookTripSecrets
 
+  # Feedback Lambda Function
   FEEDBACKFUNCTION:
     Type: AWS::Serverless::Function
     Properties:
@@ -189,7 +204,7 @@ Resources:
       Role: !GetAtt FeedbackLambdaRole.Arn
       Runtime: python3.11
       Architectures:
-      - x86_64
+        - x86_64
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
@@ -198,6 +213,7 @@ Resources:
         ApiEvent:
           Type: Api
           Properties:
+            RestApiId: !Ref NookTripApi
             Path: /feedback
             Method: GET
 
@@ -205,18 +221,23 @@ Outputs:
   NookTripSecretsName:
     Description: "Secrets Manager for NookTrip API credentials"
     Value: !Ref NookTripSecrets
+
   ItinerariesApi:
     Description: "API Gateway endpoint URL for Itineraries function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/itineraries/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/itineraries/"
+
   EmailsApi:
     Description: "API Gateway endpoint URL for Emails function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/emails/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/emails/"
+
   FeedbackApi:
     Description: "API Gateway endpoint URL for Feedback function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback/"
+
   NookTripImagesBucketName:
     Description: "S3 Bucket for storing NookTrip images"
     Value: !Ref NookTripImagesBucket
+
   NookTripImagesBucketUrl:
     Description: "URL for accessing NookTrip images"
     Value: !Sub "https://${NookTripImagesBucket}.s3.amazonaws.com/"
