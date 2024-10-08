@@ -12,9 +12,9 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues:
-      - dev
-      - uat
-      - prod
+    - dev
+    - uat
+    - prod
 
 Resources:
   # Define the API Gateway explicitly
@@ -35,7 +35,7 @@ Resources:
       BucketName: !Sub "nooktrip-images-${env}"
       OwnershipControls:
         Rules:
-          - ObjectOwnership: BucketOwnerPreferred
+        - ObjectOwnership: BucketOwnerPreferred
       PublicAccessBlockConfiguration:
         BlockPublicAcls: false
         BlockPublicPolicy: false
@@ -51,11 +51,11 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: PublicReadGetObject
-            Effect: Allow
-            Principal: '*'
-            Action: s3:GetObject
-            Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
+        - Sid: PublicReadGetObject
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
 
   # IAM Role for Itineraries function
   ItinerariesLambdaRole:
@@ -64,25 +64,25 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
       Policies:
-        - PolicyName: ItinerariesLambdaPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource: !Ref NookTripSecrets
+      - PolicyName: ItinerariesLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - secretsmanager:GetSecretValue
+            Resource: !Ref NookTripSecrets
 
   # Itineraries Lambda Function
   ITINERARIESFUNCTION:
@@ -94,7 +94,7 @@ Resources:
       Role: !GetAtt ItinerariesLambdaRole.Arn
       Runtime: python3.11
       Architectures:
-        - x86_64
+      - x86_64
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
@@ -113,34 +113,34 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
       Policies:
-        - PolicyName: EmailsLambdaPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource: !Ref NookTripSecrets
-              - Effect: Allow
-                Action:
-                  - ses:SendEmail
-                  - ses:SendRawEmail
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
+      - PolicyName: EmailsLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - secretsmanager:GetSecretValue
+            Resource: !Ref NookTripSecrets
+          - Effect: Allow
+            Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+            Resource: '*'
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${NookTripImagesBucket}/*"
 
   # Emails Lambda Function
   EMAILSFUNCTION:
@@ -152,13 +152,13 @@ Resources:
       Role: !GetAtt EmailsLambdaRole.Arn
       Runtime: python3.11
       Architectures:
-        - x86_64
+      - x86_64
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
           IMAGES_BUCKET_NAME: !Ref NookTripImagesBucket
           # Remove circular dependency on ServerlessRestApi
-          # FEEDBACK_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
+      # FEEDBACK_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
       Events:
         ApiEvent:
           Type: Api
@@ -174,25 +174,25 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
       Policies:
-        - PolicyName: FeedbackLambdaPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource: !Ref NookTripSecrets
+      - PolicyName: FeedbackLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - secretsmanager:GetSecretValue
+            Resource: !Ref NookTripSecrets
 
   # Feedback Lambda Function
   FEEDBACKFUNCTION:
@@ -204,11 +204,11 @@ Resources:
       Role: !GetAtt FeedbackLambdaRole.Arn
       Runtime: python3.11
       Architectures:
-        - x86_64
+      - x86_64
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
-          DB_CONNECTION_STRING: !Sub "{{resolve:secretsmanager:${NookTripSecrets}:SecretString:DB_CONNECTION_STRING}}"
+          DB_CONNECTION_STRING: !Sub "{{resolve:secretsmanager:${NookTripSecrets}:SecretString:DB_CONNECTION}}"
       Events:
         ApiEvent:
           Type: Api
