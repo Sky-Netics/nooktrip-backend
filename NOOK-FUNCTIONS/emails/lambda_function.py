@@ -91,7 +91,7 @@ def validate_input(data: Dict[str, Any]) -> Dict[str, str]:
         errors["validation"] = str(e)
     return errors
 
-def save_itinerary(email: str, itinerary: Dict[str, Any]) -> bool:
+def save_itinerary(email: str, itinerary: Dict[str, Any]) -> Optional[int]:
     """
     Save the selected itinerary to the database.
     
@@ -100,7 +100,7 @@ def save_itinerary(email: str, itinerary: Dict[str, Any]) -> bool:
     itinerary (Dict[str, Any]): The selected itinerary.
     
     Returns:
-    bool: True if the itinerary was saved successfully, False otherwise.
+    Optional[int]: The ID of the saved itinerary if successful, None otherwise.
     """
     try:
         with db.connect() as conn:
@@ -112,21 +112,22 @@ def save_itinerary(email: str, itinerary: Dict[str, Any]) -> bool:
             if result.rowcount == 1:
                 conn.commit()
                 logger.info(f"Itinerary saved successfully for email: {email}")
-                return True
+                return result.inserted_primary_key[0]
             else:
                 logger.warning(f"Failed to save itinerary for email: {email}")
-                return False
+                return None
     except SQLAlchemyError as e:
         logger.error(f"Database error while saving itinerary for email {email}: {str(e)}")
-        return False
+        return None
 
-def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
+def send_email(recipient: str, itinerary: Dict[str, Any], itinerary_id: int) -> bool:
     """
     Send an email with the itinerary details using Gmail SMTP.
     
     Args:
     recipient (str): The recipient's email address.
     itinerary (Dict[str, Any]): The itinerary details.
+    itinerary_id (int): The ID of the saved itinerary.
     
     Returns:
     bool: True if the email was sent successfully, False otherwise.
@@ -148,6 +149,15 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     html_content = html_content.replace('[Date]', f"{itinerary['start']} - {itinerary['end']}")
     html_content = html_content.replace('[Place A]', itinerary['stops'][0]['location_title'])
     html_content = html_content.replace('[Place B]', itinerary['stops'][-1]['location_title'])
+
+    # Generate feedback URLs
+    feedback_base_url = os.environ.get('FEEDBACK_API_URL', 'https://example.com/feedback')
+    like_url = f"{feedback_base_url}?itinerary_id={itinerary_id}&feedback=like"
+    dislike_url = f"{feedback_base_url}?itinerary_id={itinerary_id}&feedback=dislike"
+
+    # Replace feedback URLs in the template
+    html_content = html_content.replace('[Like URL]', like_url)
+    html_content = html_content.replace('[Dislike URL]', dislike_url)
 
     # Create activities content
     activities_content = f"""
@@ -234,14 +244,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     email = json_data["email"]
     itinerary = json_data["itinerary"]
     
-    if not save_itinerary(email, itinerary):
+    itinerary_id = save_itinerary(email, itinerary)
+    if not itinerary_id:
         logger.error(f"Failed to save itinerary for email: {email}")
         return {
             "statusCode": 500,
             "body": json.dumps("Failed to save itinerary")
         }
     
-    if not send_email(email, itinerary):
+    if not send_email(email, itinerary, itinerary_id):
         logger.error(f"Failed to send email to: {email}")
         return {
             "statusCode": 500,

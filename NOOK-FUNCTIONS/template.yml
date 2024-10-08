@@ -146,12 +146,60 @@ Resources:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
           IMAGES_BUCKET_NAME: !Ref NookTripImagesBucket
+          FEEDBACK_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
       Events:
         ApiEvent:
           Type: Api
           Properties:
             Path: /emails
             Method: POST
+
+  FeedbackLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: FeedbackLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - secretsmanager:GetSecretValue
+            Resource: !Ref NookTripSecrets
+
+  FEEDBACKFUNCTION:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: feedbacks/
+      FunctionName: !Sub "Feedback-${env}"
+      Handler: feedback_lambda_function.lambda_handler
+      Role: !GetAtt FeedbackLambdaRole.Arn
+      Runtime: python3.11
+      Architectures:
+      - x86_64
+      Environment:
+        Variables:
+          SECRET_ID_NAME: !Ref NookTripSecrets
+          DB_CONNECTION_STRING: !Sub "{{resolve:secretsmanager:${NookTripSecrets}:SecretString:DB_CONNECTION_STRING}}"
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /feedback
+            Method: GET
 
 Outputs:
   NookTripSecretsName:
@@ -163,6 +211,9 @@ Outputs:
   EmailsApi:
     Description: "API Gateway endpoint URL for Emails function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/emails/"
+  FeedbackApi:
+    Description: "API Gateway endpoint URL for Feedback function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback/"
   NookTripImagesBucketName:
     Description: "S3 Bucket for storing NookTrip images"
     Value: !Ref NookTripImagesBucket
