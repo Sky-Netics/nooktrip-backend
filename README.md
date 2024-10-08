@@ -2,6 +2,8 @@
 
 This repository contains the backend code for the NookTrip project, a travel itinerary management system.
 
+## Cloud Architecture
+![image.png](Template/image/stack.png)
 ## Project Structure
 
 The project is organized into several main components:
