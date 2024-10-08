@@ -150,29 +150,39 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     html_content = html_content.replace('[Place B]', itinerary['stops'][-1]['location_title'])
 
     # Create activities content
-    activities_content = ""
+    activities_content = f"""
+    <!-- Package Details -->
+    <table width="100%">
+      <tr>
+        <td>
+          <h3 style="background-color: #ffd700; padding: 10px; border-radius: 5px; color: #654321; margin: 0 0 20px 0;">What's Included in Your Package</h3>
+    """
+
     for i, stop in enumerate(itinerary['stops']):
         activities_content += f"""
-        <p style="margin: 10px 0;"><strong>Stop {i+1}:</strong> {stop['location_title']} - {stop['duration']}</p>
-        <p style="margin: 10px 0;">Cost: {stop['cost']} {stop['currency']}</p>
-        <p style="margin: 10px 0;">Address: {stop['location_address']}</p>
-        <p style="margin: 10px 0;"><a href="https://www.google.com/maps/search/?api=1&query={stop['google_map_coordinates']}">View on Google Maps</a></p>
+          <p style="margin: 10px 0;"><strong>Stop {i+1}:</strong> {stop['location_title']} - {stop['duration']}</p>
+          <p style="margin: 10px 0;">Cost: {stop['cost']} {stop['currency']}</p>
+          <p style="margin: 10px 0;">Address: {stop['location_address']}</p>
+          <p style="margin: 10px 0;"><a href="https://www.google.com/maps/search/?api=1&query={stop['google_map_coordinates']}">View on Google Maps</a></p>
         """
 
     # Add total cost, duration, distance, and transport mode
     activities_content += f"""
-    <p style="margin: 10px 0;"><strong>Total Cost:</strong> {itinerary['total_cost']} {itinerary['location_currency']}</p>
-    <p style="margin: 10px 0;"><strong>Total Duration:</strong> {itinerary['total_duration']}</p>
-    <p style="margin: 10px 0;"><strong>Total Distance:</strong> {itinerary['total_distance']}</p>
-    <p style="margin: 10px 0;"><strong>Transport Mode:</strong> {itinerary['transport_mode']}</p>
+          <p style="margin: 10px 0;"><strong>Total Cost:</strong> {itinerary['total_cost']} {itinerary['location_currency']}</p>
+          <p style="margin: 10px 0;"><strong>Total Duration:</strong> {itinerary['total_duration']}</p>
+          <p style="margin: 10px 0;"><strong>Total Distance:</strong> {itinerary['total_distance']}</p>
+          <p style="margin: 10px 0;"><strong>Transport Mode:</strong> {itinerary['transport_mode']}</p>
+        </td>
+      </tr>
+    </table>
     """
 
-    # Replace only the activities content
-    package_details_start = '<h3 style="background-color: #ffd700; padding: 10px; border-radius: 5px; color: #654321; margin: 0 0 20px 0;">What\'s Included in Your Package</h3>'
-    package_details_end = '</td>\n                  </tr>\n                </table>'
+    # Replace the entire Package Details section
+    package_details_start = '<!-- Package Details -->'
+    package_details_end = '</table>'
     
-    start_index = html_content.index(package_details_start) + len(package_details_start)
-    end_index = html_content.index(package_details_end)
+    start_index = html_content.index(package_details_start)
+    end_index = html_content.index(package_details_end, start_index) + len(package_details_end)
     
     html_content = html_content[:start_index] + activities_content + html_content[end_index:]
 
