@@ -134,7 +134,6 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     SENDER = secrets.get("SENDER_EMAIL", "your-sender-email@gmail.com")
     SENDER_PASSWORD = secrets.get("SENDER_PASSWORD", "your-sender-password")
     SUBJECT = f"Your NookTrip Itinerary: {itinerary['package_name']}"
-    S3_BUCKET_URL = f"https://{os.environ.get('IMAGES_BUCKET_NAME')}.s3.amazonaws.com"
 
     # Read the HTML template
     try:
@@ -154,34 +153,28 @@ def send_email(recipient: str, itinerary: Dict[str, Any]) -> bool:
     activities_content = ""
     for i, stop in enumerate(itinerary['stops']):
         activities_content += f"""
-        <p style="margin: 10px 0;">
-            <strong>Stop {i+1}:</strong> {stop['location_title']} - {stop['duration']}
-            <br>Cost: {stop['cost']} {stop['currency']}
-            <br>Address: {stop['location_address']}
-            <br><a href="https://www.google.com/maps/search/?api=1&query={stop['google_map_coordinates']}">View on Google Maps</a>
-        </p>
+        <p style="margin: 10px 0;"><strong>Stop {i+1}:</strong> {stop['location_title']} - {stop['duration']}</p>
+        <p style="margin: 10px 0;">Cost: {stop['cost']} {stop['currency']}</p>
+        <p style="margin: 10px 0;">Address: {stop['location_address']}</p>
+        <p style="margin: 10px 0;"><a href="https://www.google.com/maps/search/?api=1&query={stop['google_map_coordinates']}">View on Google Maps</a></p>
         """
 
-    # Replace the entire package details section
-    package_details_start = '<h3 style="background-color: #ffd700; padding: 10px; border-radius: 5px; color: #654321; margin: 0 0 20px 0;">What\'s Included in Your Package</h3>'
-    package_details_end = '</td>\n                  </tr>\n                </table>'
-    package_details_content = f"""
-    {package_details_start}
-    {activities_content}
+    # Add total cost, duration, distance, and transport mode
+    activities_content += f"""
     <p style="margin: 10px 0;"><strong>Total Cost:</strong> {itinerary['total_cost']} {itinerary['location_currency']}</p>
     <p style="margin: 10px 0;"><strong>Total Duration:</strong> {itinerary['total_duration']}</p>
     <p style="margin: 10px 0;"><strong>Total Distance:</strong> {itinerary['total_distance']}</p>
     <p style="margin: 10px 0;"><strong>Transport Mode:</strong> {itinerary['transport_mode']}</p>
-    {package_details_end}
     """
-    
-    html_content = html_content.replace(
-        html_content[html_content.index(package_details_start):html_content.index(package_details_end) + len(package_details_end)],
-        package_details_content
-    )
 
-    # Update image URLs to use S3 bucket
-    html_content = html_content.replace('src="image/', f'src="{S3_BUCKET_URL}/')
+    # Replace only the activities content
+    package_details_start = '<h3 style="background-color: #ffd700; padding: 10px; border-radius: 5px; color: #654321; margin: 0 0 20px 0;">What\'s Included in Your Package</h3>'
+    package_details_end = '</td>\n                  </tr>\n                </table>'
+    
+    start_index = html_content.index(package_details_start) + len(package_details_start)
+    end_index = html_content.index(package_details_end)
+    
+    html_content = html_content[:start_index] + activities_content + html_content[end_index:]
 
     # Create the email message
     msg = MIMEMultipart()
