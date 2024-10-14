@@ -23,13 +23,35 @@ Resources:
     Properties:
       Name: NookTripApi
 
+  # Add API resources
+  ItinerariesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref NookTripApi
+      ParentId: !GetAtt NookTripApi.RootResourceId
+      PathPart: 'itineraries'
+
+  EmailsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref NookTripApi
+      ParentId: !GetAtt NookTripApi.RootResourceId
+      PathPart: 'emails'
+
+  FeedbackResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref NookTripApi
+      ParentId: !GetAtt NookTripApi.RootResourceId
+      PathPart: 'feedback'
+
   # Add a deployment resource
   NookTripApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - ITINERARIESFUNCTION
-      - EMAILSFUNCTION
-      - FEEDBACKFUNCTION
+      - ItinerariesMethod
+      - EmailsMethod
+      - FeedbackMethod
     Properties:
       RestApiId: !Ref NookTripApi
       Description: Deployment for NookTrip API
@@ -117,14 +139,19 @@ Resources:
       Environment:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref NookTripApi
-            Path: /itineraries
-            Method: POST
-            Stage: !Ref env
+
+  # Itineraries API Method
+  ItinerariesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref ItinerariesResource
+      RestApiId: !Ref NookTripApi
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ITINERARIESFUNCTION.Arn}/invocations"
 
   # IAM Role for Emails function
   EmailsLambdaRole:
@@ -177,14 +204,19 @@ Resources:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
           IMAGES_BUCKET_NAME: !Ref NookTripImagesBucket
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref NookTripApi
-            Path: /emails
-            Method: POST
-            Stage: !Ref env
+
+  # Emails API Method
+  EmailsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref EmailsResource
+      RestApiId: !Ref NookTripApi
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EMAILSFUNCTION.Arn}/invocations"
 
   # IAM Role for Feedback function
   FeedbackLambdaRole:
@@ -228,14 +260,44 @@ Resources:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
           DB_CONNECTION_STRING: !Sub "{{resolve:secretsmanager:${NookTripSecrets}:SecretString:DB_CONNECTION}}"
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref NookTripApi
-            Path: /feedback
-            Method: GET
-            Stage: !Ref env
+
+  # Feedback API Method
+  FeedbackMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref FeedbackResource
+      RestApiId: !Ref NookTripApi
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FEEDBACKFUNCTION.Arn}/invocations"
+
+  # Lambda permissions
+  ItinerariesFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ITINERARIESFUNCTION
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${NookTripApi}/*/*/*"
+
+  EmailsFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref EMAILSFUNCTION
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${NookTripApi}/*/*/*"
+
+  FeedbackFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref FEEDBACKFUNCTION
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${NookTripApi}/*/*/*"
 
 Outputs:
   NookTripSecretsName:
@@ -244,15 +306,15 @@ Outputs:
 
   ItinerariesApi:
     Description: "API Gateway endpoint URL for Itineraries function"
-    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/itineraries/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/itineraries"
 
   EmailsApi:
     Description: "API Gateway endpoint URL for Emails function"
-    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/emails/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/emails"
 
   FeedbackApi:
     Description: "API Gateway endpoint URL for Feedback function"
-    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/feedback/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/feedback"
 
   NookTripImagesBucketName:
     Description: "S3 Bucket for storing NookTrip images"
