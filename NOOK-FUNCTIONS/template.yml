@@ -23,6 +23,25 @@ Resources:
     Properties:
       Name: NookTripApi
 
+  # Add a deployment resource
+  NookTripApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ITINERARIESFUNCTION
+      - EMAILSFUNCTION
+      - FEEDBACKFUNCTION
+    Properties:
+      RestApiId: !Ref NookTripApi
+      Description: Deployment for NookTrip API
+
+  # Add a stage resource using the env parameter
+  NookTripApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref NookTripApiDeployment
+      RestApiId: !Ref NookTripApi
+      StageName: !Ref env
+
   NookTripSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -105,6 +124,7 @@ Resources:
             RestApiId: !Ref NookTripApi
             Path: /itineraries
             Method: POST
+            Stage: !Ref env
 
   # IAM Role for Emails function
   EmailsLambdaRole:
@@ -157,8 +177,6 @@ Resources:
         Variables:
           SECRET_ID_NAME: !Ref NookTripSecrets
           IMAGES_BUCKET_NAME: !Ref NookTripImagesBucket
-          # Remove circular dependency on ServerlessRestApi
-      # FEEDBACK_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback"
       Events:
         ApiEvent:
           Type: Api
@@ -166,6 +184,7 @@ Resources:
             RestApiId: !Ref NookTripApi
             Path: /emails
             Method: POST
+            Stage: !Ref env
 
   # IAM Role for Feedback function
   FeedbackLambdaRole:
@@ -216,6 +235,7 @@ Resources:
             RestApiId: !Ref NookTripApi
             Path: /feedback
             Method: GET
+            Stage: !Ref env
 
 Outputs:
   NookTripSecretsName:
@@ -224,15 +244,15 @@ Outputs:
 
   ItinerariesApi:
     Description: "API Gateway endpoint URL for Itineraries function"
-    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/itineraries/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/itineraries/"
 
   EmailsApi:
     Description: "API Gateway endpoint URL for Emails function"
-    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/emails/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/emails/"
 
   FeedbackApi:
     Description: "API Gateway endpoint URL for Feedback function"
-    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/feedback/"
+    Value: !Sub "https://${NookTripApi}.execute-api.${AWS::Region}.amazonaws.com/${env}/feedback/"
 
   NookTripImagesBucketName:
     Description: "S3 Bucket for storing NookTrip images"
