@@ -58,3 +58,4 @@ def lambda_handler(event, context):
         }
     finally:
         session.close()
+        
