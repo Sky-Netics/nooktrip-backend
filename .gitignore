@@ -1,3 +1,4 @@
 /ORM/__pycache__
 /ORM/alembic.ini
 /.vscode
+/Zops/.env

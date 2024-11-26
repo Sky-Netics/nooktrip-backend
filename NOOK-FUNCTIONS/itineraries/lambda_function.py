@@ -1,10 +1,13 @@
 import json
 import os
 import logging
+import base64
 from typing import Dict, Any, List
 from random import randint
+from urllib.parse import quote
 
 import boto3
+import requests
 from botocore.exceptions import ClientError
 from openai import OpenAI
 from pydantic import BaseModel
@@ -12,6 +15,82 @@ from pydantic import BaseModel
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Static Map Functions
+def direction_path(start_coordinates, end_coordinates, mode, access_token):
+    start = f'{start_coordinates[0]},{start_coordinates[1]}'
+    end = f'{end_coordinates[0]},{end_coordinates[1]}'
+
+    directions_url = f"https://api.mapbox.com/directions/v5/mapbox/{mode}/{start};{end}?alternatives=false&continue_straight=true&geometries=polyline&overview=full&steps=false&access_token={access_token}"
+
+    response = requests.get(directions_url)
+    logger.info(f"Direction API response status: {response.status_code}")
+    return response.json()['routes'][0]['geometry']
+
+def encoding_points(coordinates):
+    encoded_points = ''
+    number_of_coordinates = len(coordinates)
+    unicode = 97  # 'a'
+    for i in range(number_of_coordinates):
+        if i == 0:
+            encoded_points += f"pin-l-{chr(unicode + i)}+26a269({coordinates[i][0]},{coordinates[i][1]}),"
+        elif i == (number_of_coordinates - 1):
+            encoded_points += f"pin-l-{chr(unicode + i)}+ff0000({coordinates[i][0]},{coordinates[i][1]})"
+        else:
+            encoded_points += f"pin-s-{chr(unicode + i)}+555555({coordinates[i][0]},{coordinates[i][1]}),"
+    return encoded_points
+
+def encoding_path(paths_coordinates, modes):
+    DRIVING_COLOR = '2bff00'
+    WALKING_COLOR = '0000ff'
+    CYCLING_COLOR = 'ff0000'
+    STROKE_WIDTH = 3
+    
+    encoded_path = ''
+    number_of_paths = len(paths_coordinates)
+    for i in range(number_of_paths):
+        if modes[i] == 'driving':
+            encoded_path += f"path-{STROKE_WIDTH}+{DRIVING_COLOR}({paths_coordinates[i]}),"
+        elif modes[i] == 'walking':
+            encoded_path += f"path-{STROKE_WIDTH}+{WALKING_COLOR}({paths_coordinates[i]}),"
+        elif modes[i] == 'cycling':
+            encoded_path += f"path-{STROKE_WIDTH}+{CYCLING_COLOR}({paths_coordinates[i]}),"
+        else:
+            encoded_path += f"path-{STROKE_WIDTH}({paths_coordinates[i]}),"
+
+    return encoded_path[:-1]
+
+def static_map_image(coordinates, modes, size, access_token):
+    """
+    Generate a static map image and return it as base64 encoded string.
+    
+    Args:
+    coordinates (List[List[float]]): List of [longitude, latitude] coordinates
+    modes (List[str]): List of transport modes between coordinates
+    size (str): Size of the image in format 'WxH'
+    access_token (str): Mapbox access token
+    
+    Returns:
+    str: Base64 encoded PNG image
+    """
+    paths_coordinates = []
+
+    for i in range(len(coordinates)-1):
+        paths_coordinates.append(direction_path(coordinates[i], coordinates[i+1], modes[i], access_token))
+
+    encoded_points = encoding_points(coordinates)
+    encoded_path = encoding_path(paths_coordinates, modes)
+    encoded_path_url = quote(encoded_path)
+
+    image_url = f"https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/{encoded_path_url},{encoded_points}/auto/{size}@2x?access_token={access_token}"
+
+    response = requests.get(image_url)
+    if response.status_code == 200:
+        base64_image = base64.b64encode(response.content).decode('utf-8')
+        return base64_image
+    else:
+        logger.error(f"Failed to download map image. Status code: {response.status_code}")
+        return None
 
 # Retrieve secrets from AWS Secrets Manager
 def get_secret():
@@ -128,9 +207,7 @@ def generate_itinerary(city: str, budget: int, is_single: bool) -> Dict[str, Any
    - ### Google Maps detailed coordinates (in latitude,longitude format) . 
    Variety: Ensure a good mix of activities (e.g., sightseeing, cultural experiences, food, relaxation).
 10. Time Management: Account for travel time between stops.
-11. Local Insights: Include local tips or lesser-known attractions when possible.
-
-Provide a comprehensive and engaging itinerary that maximizes the traveler's experience within their constraints."""},
+11. Local Insights: Include local tips or lesser-known attractions when possible."""},
                 {"role": "user", "content": prompt}
             ],
             response_format=Response,
@@ -161,6 +238,41 @@ def add_paths_to_itinerary(itinerary: Dict[str, Any]) -> Dict[str, Any]:
     stops[-1]['path_to_next'] = None
     
     return itinerary
+
+def generate_route_map(itinerary: Dict[str, Any], mapbox_token: str) -> str:
+    """
+    Generate a static map image for the itinerary route.
+    
+    Args:
+    itinerary (Dict[str, Any]): The itinerary to generate a map for.
+    mapbox_token (str): Mapbox access token
+    
+    Returns:
+    str: Base64 encoded map image.
+    """
+    coordinates = []
+    modes = []
+    
+    # Extract coordinates from stops
+    for stop in itinerary['stops']:
+        lat, lon = map(float, stop['google_map_coordinates'].split(','))
+        coordinates.append([lon, lat])  # Mapbox expects [longitude, latitude]
+    
+    # Determine transport modes between stops
+    transport_mode = itinerary['transport_mode'].lower()
+    if 'walking' in transport_mode:
+        mode = 'walking'
+    elif 'cycling' in transport_mode or 'biking' in transport_mode:
+        mode = 'cycling'
+    else:
+        mode = 'driving'
+    
+    # Add mode for each path between stops
+    for _ in range(len(coordinates) - 1):
+        modes.append(mode)
+    
+    # Generate and return the base64 encoded map image
+    return static_map_image(coordinates, modes, size='500x400', access_token=mapbox_token)
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
@@ -196,11 +308,25 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Parse the generated itineraries
         response_data = json.loads(itineraries)
         
-        # Add paths to each itinerary
+        # Get Mapbox token from secrets
+        mapbox_token = secrets.get('MAPBOX_TOKEN', 'sk.eyJ1Ijoibm9va3RyaXAiLCJhIjoiY20zeXQxYTFnMGtsMjJrcTF0dHh3aTJndiJ9.wMLQ48MN9DfRjTr5ROdC4Q')
+        if not mapbox_token:
+            logger.error("Mapbox token not found in secrets")
+            return {
+                "statusCode": 500,
+                "body": json.dumps("Missing Mapbox configuration")
+            }
+        
+        # Add paths and generate maps for each itinerary
         for itinerary in response_data['itineraries']:
             add_paths_to_itinerary(itinerary)
+            base64_map = generate_route_map(itinerary, mapbox_token)
+            if base64_map:
+                itinerary['map_image'] = base64_map
+            else:
+                logger.warning(f"Failed to generate map for itinerary: {itinerary['package_name']}")
         
-        logger.info("Itineraries generated and paths added successfully")
+        logger.info("Itineraries generated with maps and paths added successfully")
         return {
             "statusCode": 200,
             "body": json.dumps(response_data)
