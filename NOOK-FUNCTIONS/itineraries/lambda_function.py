@@ -196,18 +196,25 @@ def generate_itinerary(city: str, budget: int, is_single: bool) -> Dict[str, Any
 2. Budget: The total cost must be equal to or less than the user's budget.
 3. Duration: Total duration should be between 2 to 8 hours.
 4. Currency: Use the local currency of the specified city.
-5. Transportation: Include a mix of walking, biking, and public transport (including ferries if applicable).
+5. Transportation: For transport_mode field, use one of these values:
+   - 'walking' for walking routes
+   - 'cycling' for biking routes
+   - 'driving' for car/taxi routes
+   - 'ferry' for water transport
+   Note: If ferry is used, the map will show the route as 'driving' between ports.
 6. Food: Include meals and small snacks to make the trip more exciting.
 7. Traveler Type: Adjust activities based on whether it's for a single traveler or a couple.
 8. Stops: For each stop, provide:
-   - Location Name the name of the location (e.g cafe name )
+   - Location Name (e.g., cafe name)
    - Location address 
    - Duration of the activity
    - Cost
    - ### Google Maps detailed coordinates (in latitude,longitude format) . 
-   Variety: Ensure a good mix of activities (e.g., sightseeing, cultural experiences, food, relaxation).
+9. Variety: Ensure a good mix of activities (e.g., sightseeing, cultural experiences, food, relaxation).
 10. Time Management: Account for travel time between stops.
-11. Local Insights: Include local tips or lesser-known attractions when possible."""},
+11. Local Insights: Include local tips or lesser-known attractions when possible.
+
+IMPORTANT: When ferry transport is used, the map will display the route as a driving path between ports, but the itinerary description will accurately reflect ferry transport."""},
                 {"role": "user", "content": prompt}
             ],
             response_format=Response,
@@ -258,14 +265,13 @@ def generate_route_map(itinerary: Dict[str, Any], mapbox_token: str) -> str:
         lat, lon = map(float, stop['google_map_coordinates'].split(','))
         coordinates.append([lon, lat])  # Mapbox expects [longitude, latitude]
     
-    # Determine transport modes between stops
-    transport_mode = itinerary['transport_mode'].lower()
-    if 'walking' in transport_mode:
-        mode = 'walking'
-    elif 'cycling' in transport_mode or 'biking' in transport_mode:
-        mode = 'cycling'
-    else:
+    # Get transport mode - if ferry, use driving for map display
+    mode = itinerary['transport_mode'].lower()
+    if mode == 'ferry':
         mode = 'driving'
+    elif mode not in ['walking', 'cycling', 'driving']:
+        logger.warning(f"Invalid transport mode '{mode}', defaulting to 'walking'")
+        mode = 'walking'
     
     # Add mode for each path between stops
     for _ in range(len(coordinates) - 1):
@@ -309,7 +315,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         response_data = json.loads(itineraries)
         
         # Get Mapbox token from secrets
-        mapbox_token = secrets.get('MAPBOX_TOKEN', 'sk.eyJ1Ijoibm9va3RyaXAiLCJhIjoiY20zeXQxYTFnMGtsMjJrcTF0dHh3aTJndiJ9.wMLQ48MN9DfRjTr5ROdC4Q')
+        mapbox_token = secrets.get('MAPBOX_TOKEN')
         if not mapbox_token:
             logger.error("Mapbox token not found in secrets")
             return {
@@ -323,6 +329,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             base64_map = generate_route_map(itinerary, mapbox_token)
             if base64_map:
                 itinerary['map_image'] = base64_map
+                logger.info(f"Successfully generated map for itinerary: {itinerary['package_name']}")
             else:
                 logger.warning(f"Failed to generate map for itinerary: {itinerary['package_name']}")
         
@@ -335,10 +342,22 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.error(f"Error in lambda_handler: {str(e)}")
         return {
             "statusCode": 500,
-            "body": json.dumps("An error occurred while processing your request")
+            "body": json.dumps(f"An error occurred while processing your request: {str(e)}")
         }
 
 if __name__ == '__main__':
     # For local testing
     test_event = {'body': json.dumps({'city': 'Toronto Downtown', 'budget': 50, 'is_single': False})}
-    print(lambda_handler(test_event, None)['body'])
+    result = lambda_handler(test_event, None)
+    print(f"Status Code: {result['statusCode']}")
+    if result['statusCode'] == 200:
+        response_data = json.loads(result['body'])
+        # Print first few characters of map_image to verify it's base64
+        for itinerary in response_data['itineraries']:
+            if 'map_image' in itinerary:
+                print(f"Map generated for {itinerary['package_name']}")
+                print(f"Base64 image preview: {itinerary['map_image'][:50]}...")
+            else:
+                print(f"No map generated for {itinerary['package_name']}")
+    else:
+        print(f"Error: {result['body']}")
