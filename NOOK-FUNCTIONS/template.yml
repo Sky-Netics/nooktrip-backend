@@ -134,7 +134,7 @@ Resources:
       Handler: lambda_function.lambda_handler
       Role: !GetAtt ItinerariesLambdaRole.Arn
       Runtime: python3.11
-      MemorySize: 2048  # Increased memory for handling map generation and image processing
+      MemorySize: 3072  # Increased memory for better performance
       Architectures:
       - x86_64
       Environment:
