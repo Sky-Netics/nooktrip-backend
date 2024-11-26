@@ -30,14 +30,13 @@ def direction_path(start_coordinates, end_coordinates, mode, access_token):
 def encoding_points(coordinates):
     encoded_points = ''
     number_of_coordinates = len(coordinates)
-    unicode = 97  # 'a'
     for i in range(number_of_coordinates):
         if i == 0:
-            encoded_points += f"pin-l-{chr(unicode + i)}+26a269({coordinates[i][0]},{coordinates[i][1]}),"
+            encoded_points += f"pin-l-{i+1}+26a269({coordinates[i][0]},{coordinates[i][1]}),"
         elif i == (number_of_coordinates - 1):
-            encoded_points += f"pin-l-{chr(unicode + i)}+ff0000({coordinates[i][0]},{coordinates[i][1]})"
+            encoded_points += f"pin-l-{i+1}+ff0000({coordinates[i][0]},{coordinates[i][1]})"
         else:
-            encoded_points += f"pin-s-{chr(unicode + i)}+555555({coordinates[i][0]},{coordinates[i][1]}),"
+            encoded_points += f"pin-s-{i+1}+555555({coordinates[i][0]},{coordinates[i][1]}),"
     return encoded_points
 
 def encoding_path(paths_coordinates, modes):
