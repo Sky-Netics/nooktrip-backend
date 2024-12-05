@@ -127,6 +127,7 @@ class Stop(BaseModel):
     cost: int
     currency: str
     google_map_coordinates: str
+    transport_mode: str  # Transport mode for reaching this stop
 
 class Itinerary(BaseModel):
     stops: List[Stop]
@@ -138,7 +139,6 @@ class Itinerary(BaseModel):
     start: str
     end: str
     total_distance: str
-    transport_mode: str
 
 class Response(BaseModel):
     itineraries: List[Itinerary]
@@ -264,16 +264,15 @@ def generate_route_map(itinerary: Dict[str, Any], mapbox_token: str) -> str:
         lat, lon = map(float, stop['google_map_coordinates'].split(','))
         coordinates.append([lon, lat])  # Mapbox expects [longitude, latitude]
     
-    # Get transport mode - if ferry, use driving for map display
-    mode = itinerary['transport_mode'].lower()
-    if mode == 'ferry':
-        mode = 'driving'
-    elif mode not in ['walking', 'cycling', 'driving']:
-        logger.warning(f"Invalid transport mode '{mode}', defaulting to 'walking'")
-        mode = 'walking'
-    
-    # Add mode for each path between stops
-    for _ in range(len(coordinates) - 1):
+    # Get transport modes for each path between stops
+    for i in range(len(itinerary['stops']) - 1):
+        # Use the transport mode of the current stop, defaulting to walking if not specified
+        mode = itinerary['stops'][i].get('transport_mode', 'walking').lower()
+        if mode == 'ferry':
+            mode = 'driving'  # Map displays ferry routes as driving
+        elif mode not in ['walking', 'cycling', 'driving']:
+            logger.warning(f"Invalid transport mode '{mode}', defaulting to 'walking'")
+            mode = 'walking'
         modes.append(mode)
     
     # Generate and return the base64 encoded map image
@@ -322,17 +321,18 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "body": json.dumps("Missing Mapbox configuration")
             }
         
-        # Add paths and generate maps for each itinerary
+        # Add paths to each itinerary (map generation is now handled by frontend)
         for itinerary in response_data['itineraries']:
             add_paths_to_itinerary(itinerary)
-            base64_map = generate_route_map(itinerary, mapbox_token)
-            if base64_map:
-                itinerary['map_image'] = base64_map
-                logger.info(f"Successfully generated map for itinerary: {itinerary['package_name']}")
-            else:
-                logger.warning(f"Failed to generate map for itinerary: {itinerary['package_name']}")
+            # Map generation commented out as it's now handled by frontend
+            # base64_map = generate_route_map(itinerary, mapbox_token)
+            # if base64_map:
+            #     itinerary['map_image'] = base64_map
+            #     logger.info(f"Successfully generated map for itinerary: {itinerary['package_name']}")
+            # else:
+            #     logger.warning(f"Failed to generate map for itinerary: {itinerary['package_name']}")
         
-        logger.info("Itineraries generated with maps and paths added successfully")
+        logger.info("Itineraries generated with paths added successfully")
         return {
             "statusCode": 200,
             "body": json.dumps(response_data)
@@ -351,12 +351,6 @@ if __name__ == '__main__':
     print(f"Status Code: {result['statusCode']}")
     if result['statusCode'] == 200:
         response_data = json.loads(result['body'])
-        # Print first few characters of map_image to verify it's base64
-        for itinerary in response_data['itineraries']:
-            if 'map_image' in itinerary:
-                print(f"Map generated for {itinerary['package_name']}")
-                print(f"Base64 image preview: {itinerary['map_image'][:50]}...")
-            else:
-                print(f"No map generated for {itinerary['package_name']}")
+        print(f"Generated {len(response_data['itineraries'])} itineraries")
     else:
         print(f"Error: {result['body']}")
